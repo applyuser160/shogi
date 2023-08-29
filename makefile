@@ -1,11 +1,21 @@
 CC = gcc
-OBJECT_FILES = main.o mcts.o db_midiate.o board.o node.o piece.o tree.o util.o
+OBJECT_FILES = mcts.o db_midiate.o board.o node.o piece.o tree.o util.o
 LIB_MYSQL = -L "./mysql-8.1.0-winx64/lib" -llibmysql
 CLEAN = del -f *.o
 
 all: main
-	$(CC) -o main $(OBJECT_FILES) $(LIB_MYSQL)
+	$(CC) -o main main.o $(OBJECT_FILES) $(LIB_MYSQL)
 	$(CLEAN)
+learning: learn
+	$(CC) -o learn learn.o $(OBJECT_FILES) $(LIB_MYSQL)
+	$(CLEAN)
+merging: merge
+	$(CC) -o merge merge.o $(OBJECT_FILES) $(LIB_MYSQL)
+	$(CLEAN)
+learn: mcts
+	$(CC) -Iinclude -c -o learn.o learn.c
+merge: mcts
+	$(CC) -Iinclude -c -o merge.o merge.c
 main: mcts
 	$(CC) -Iinclude -c -o main.o main.c
 db_midiate: node

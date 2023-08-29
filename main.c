@@ -2,8 +2,8 @@
 
 int main(void)
 {
-     mergeNode();
-    // learn();
+    // mergeNode();
+    learn();
     // Condition condition = initCondition();
     // char str[1341];
     // char str2[1343];
