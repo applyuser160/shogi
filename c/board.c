@@ -163,6 +163,7 @@ int serchPieceFromNotOnBoard(Piece notOnBoard[NUMBER_OF_PIECES], Piece piece)
 }
 
 // 盤面の任意の場所に駒を設置する
+// deployPieceでカバー可能
 void deployPieceOnBoard(Board *board, Address address, Piece piece)
 {
     for (int i = 0; i < NUMBER_OF_SQUARES; i++)
