@@ -53,7 +53,7 @@ def convertForBoard(board: str) -> np.ndarray:
     index = 0
     for i, v in enumerate(nob):
         if int(rep) == i:
-            same = nob[i + 1] * int(valuelist[index] - 1)
+            same = nob[i + 1] * (int(valuelist[index]) - 1)
             newNob += same
             try:
                 rep = next(iterlist).start()
