@@ -189,7 +189,6 @@ def merge():
     print(f"get updateList {len(updateList)} records {now}")
 
     insertList: List[Node] = []
-    print("generate insertList")
     for ind, ele in enumerate(grouped):
         node = Node(
             ele.parentId,
@@ -202,10 +201,9 @@ def merge():
             ele.sumSecondWinCount
         )
         insertList.append(node)
-        print(f"\r{((ind + 1) / len(grouped)):.2%}", end="")
+        print(f"\rgenerate insertList　{((ind + 1) / len(grouped)):.2%}", end="")
     print("")
 
-    print("update updateList")
     changed_update_list = []
     # insertListをタプルのセットに変換
     insert_set = {(node.turnNumber, node.move, node.board): node.id for node in insertList}
@@ -225,13 +223,12 @@ def merge():
             for v in update_dict[ele[0].id]:
                 v[0].parentId = newID
                 changed_update_list.append(v[0])
-        print(f"\r{((ind + 1) / len(deleteList)):.2%}", end="")
+        print(f"\rupdate updateList　{((ind + 1) / len(deleteList)):.2%}", end="")
     print("")
 
-    print("delete execute")
     for ind, ele in enumerate(deleteList):
         session.delete(ele[0])
-        print(f"\r{((ind + 1) / len(deleteList)):.2%}", end="")
+        print(f"\rdelete execute　{((ind + 1) / len(deleteList)):.2%}", end="")
     print("")
     print("update execute")
     session.bulk_save_objects(changed_update_list)
