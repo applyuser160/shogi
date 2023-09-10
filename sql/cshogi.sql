@@ -1,4 +1,4 @@
-create table shogi.newnode (
+create table mcts.newnode (
   ID varchar(100) not null
   , parentID varchar(100) null
   , turnNumber int(10) not null 

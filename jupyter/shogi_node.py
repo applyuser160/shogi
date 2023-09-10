@@ -11,7 +11,7 @@ import uuid
 import sqlalchemy as sa
 from sqlalchemy.engine.url import URL
 from typing import List, Self
-from sqlalchemy import ForeignKey, insert, func, select, text, update
+from sqlalchemy import ForeignKey, insert, func, select, text, update, and_, or_
 from sqlalchemy.schema import Column
 from sqlalchemy.orm import *
 from sqlalchemy.types import Integer, String
@@ -123,55 +123,70 @@ def getQueryNodeGroup():
         Node.turnNumber,
         Node.move,
         Node.board,
-        func.count().label("count"),
         func.sum(Node.throughCount).label("sumThroughCount"),
         func.sum(Node.drawCount).label("sumDrawCount"),
         func.sum(Node.firstWinCount).label("sumFirstWinCount"),
         func.sum(Node.secondWinCount).label("sumSecondWinCount")
-    ).where(Node.turnNumber < 10).group_by(Node.parentId, Node.turnNumber, Node.move, Node.board).subquery("sub")
-    return select(subquery).where(subquery.c.count > 1).limit(1000)
+    ).filter(Node.turnNumber < 10).group_by(
+        Node.parentId, Node.turnNumber, Node.move, Node.board
+    ).having(func.count() > 1).limit(10000)
+    return subquery
 
 def getNodeGroup():
     query = getQueryNodeGroup()
-    return list(session.execute(query))
+    return session.execute(query).fetchall()
 
 def getQueryGroupedNode():
-    group = getQueryNodeGroup().subquery("a")
+    subquery = session.query(
+        Node.parentId,
+        Node.turnNumber,
+        Node.move,
+        Node.board,
+    ).filter(Node.turnNumber < 10).group_by(
+        Node.parentId, Node.turnNumber, Node.move, Node.board
+    ).having(func.count() > 1).limit(10000).subquery()
     query = select(Node).join(
-        group,
-        (Node.parentId == group.c.parentId) &
-        (Node.turnNumber == group.c.turnNumber) &
-        (Node.move == group.c.move) &
-        (Node.board == group.c.board)
-    ).order_by(Node.turnNumber)
+        subquery,
+        and_(
+            Node.parentId == subquery.c.parentId,
+            Node.turnNumber == subquery.c.turnNumber,
+            Node.move == subquery.c.move,
+            Node.board == subquery.c.board
+        )
+    )
     return query
 
 def getGroupedNode():
     query = getQueryGroupedNode()
-    return session.query(Node).from_statement(query).all()
+    return session.execute(query).fetchall()
 
 def getQueryGroupedNodeChild():
-    d = getQueryGroupedNode().subquery("d")
+    subquery = getQueryGroupedNode().subquery()
     query = select(Node).join(
-        d,
-        Node.parentId == d.c.ID
+        subquery,
+        Node.parentId == subquery.c.ID
     )
     return query
 
 def getGroupedNodeChild():
     query = getQueryGroupedNodeChild()
-    return session.query(Node).from_statement(query).all()
+    return session.execute(query).fetchall()
 
 def merge():
+    now = datetime.now()
+    print(f"merge start {now}")
     grouped = getNodeGroup()
-    print(f"get grouped {len(grouped)} records")
+    now = datetime.now()
+    print(f"get grouped {len(grouped)} records {now}")
     if len(grouped) == 0:
         print("grouped non")
         return
     deleteList = getGroupedNode()
-    print(f"get deleteList {len(deleteList)} records")
+    now = datetime.now()
+    print(f"get deleteList {len(deleteList)} records {now}")
     updateList = getGroupedNodeChild()
-    print(f"get updateList {len(updateList)} records")
+    now = datetime.now()
+    print(f"get updateList {len(updateList)} records {now}")
 
     insertList: List[Node] = []
     print("generate insertList")
@@ -191,26 +206,35 @@ def merge():
     print("")
 
     print("update updateList")
+    changed_update_list = []
+    # insertListをタプルのセットに変換
+    insert_set = {(node.turnNumber, node.move, node.board): node.id for node in insertList}
+
+    # updateListを辞書に変換
+    update_dict = {node[0].parentId: [] for node in updateList}
+    for node in updateList:
+        update_dict[node[0].parentId].append(node)
+
     for ind, ele in enumerate(deleteList):
         newID = ''
-        for node in insertList:
-            if node.turnNumber == ele.turnNumber\
-                and node.move == ele.move\
-                and node.board == ele.board:
-                newID = node.id
-        for node in updateList:
-            if ele.id == node.parentId:
-                node.parentId = newID
+        key = (ele[0].turnNumber, ele[0].move, ele[0].board)
+        if key in insert_set:
+            newID = insert_set[key]
+
+        if ele[0].id in update_dict:
+            for v in update_dict[ele[0].id]:
+                v[0].parentId = newID
+                changed_update_list.append(v[0])
         print(f"\r{((ind + 1) / len(deleteList)):.2%}", end="")
     print("")
 
     print("delete execute")
     for ind, ele in enumerate(deleteList):
-        session.delete(ele)
+        session.delete(ele[0])
         print(f"\r{((ind + 1) / len(deleteList)):.2%}", end="")
     print("")
     print("update execute")
-    session.bulk_save_objects(updateList)
+    session.bulk_save_objects(changed_update_list)
     print("insert execute")
     session.bulk_save_objects(insertList)
     print("commit execute")

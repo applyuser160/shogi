@@ -1,1 +1,8 @@
 main.exe
+jupyter/data/*
+c/mysql-8.1.0-winx64/*
+.env
+c/*
+.vscode/*
+jupyter/*.pyc
+jupyter/saved_model/*
