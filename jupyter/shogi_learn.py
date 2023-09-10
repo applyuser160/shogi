@@ -68,7 +68,7 @@ def createModel() -> tf.keras.Model:
     return model
 
 def compileModel(model: tf.keras.Model):
-    model.compile(loss='mean_squared_error', optimizer='sgd', metrics=['accuracy'])
+    model.compile(loss='mean_squared_error', optimizer='sgd', metrics=['mae', 'acc'])
 
 def inputModel(path: str) -> tf.keras.Model:
     return tf.keras.models.load_model(path)
@@ -93,7 +93,8 @@ def printLearnData(history):
     ax1.set_ylabel('Loss')
     ax1.legend(loc='upper right')
 
-    ax2.plot(history.history['accuracy'], label='output_accuracy')
+    ax2.plot(history.history['acc'], label='output_accuracy')
+    ax2.plot(history.history['mae'], label='output_mae')
     ax2.set_xlabel('Epoch')
     ax2.set_ylabel('Accuracy')
     ax2.legend(loc='lower right')
@@ -114,7 +115,7 @@ def serchBestMove(board, path: str) -> int:
     input_board = pd.DataFrame(np_input_board)
     input_move = pd.DataFrame(np_input_move)
     model = inputModel(path)
-    predictions = predict(model, input_board, input_move, )
+    predictions = predict(model, input_board, input_move)
     result = pd.DataFrame(predictions, columns=['draw', 'first', 'second'])
     result['move'] = ''
     result['deviation'] = 0
