@@ -21,6 +21,7 @@ import shogi_learn as sl
 from enum import IntEnum
 import glob
 import shutil
+import copy
 
 class Winner(IntEnum):
     DRAW = 1
@@ -63,42 +64,46 @@ def bulkinsert(nodes: List[Node]):
 def selectCount():
     return session.query(Node).count()
 
-def fight() -> Winner:
-    winner: Winner
-    shogi_board = cshogi.Board()
+def fight(shogi_board = cshogi.Board(), doInsertDB: bool = True) -> Winner:
+    winner: Winner = Winner.DRAW
     nodes: List[Node] = []
     for i in range(500):
         moves = list(shogi_board.legal_moves)
-        x = random.randint(0, len(moves) - 1)
-        shogi_board.push(moves[x])
-        parentId = ''
-        if i != 0:
-            parentId = nodes[i - 1].id
-        else:
-            parentId = '7fc22d27-9439-4f05-bbd7-444be019c788'
-        node = Node(
-            parentId, 
-            shogi_board.move_number,
-            moves[x],
-            shogi_board.sfen(),
-            1, 0, 0, 0
-        )
-        nodes.append(node)
+        if len(moves) == 0: break
+        selectedMove = random.choice(moves)
+        shogi_board.push(selectedMove)
+        if doInsertDB:
+            parentId = ''
+            if i != 0:
+                parentId = nodes[i - 1].id
+            else:
+                parentId = '7fc22d27-9439-4f05-bbd7-444be019c788'
+            node = Node(
+                parentId, 
+                shogi_board.move_number,
+                selectedMove,
+                shogi_board.sfen(),
+                1, 0, 0, 0
+            )
+            nodes.append(node)
 
         if shogi_board.is_game_over():
             winner = Winner.FIRST if not shogi_board.turn else Winner.SECOND
-            for j in nodes:
-                if not shogi_board.turn:
-                    j.firstWinCount += 1
-                else:
-                    j.secondWinCount += 1
+            if doInsertDB:
+                for j in nodes:
+                    if not shogi_board.turn:
+                        j.firstWinCount += 1
+                    else:
+                        j.secondWinCount += 1
             break
         elif shogi_board.move_number == 500:
             winner = Winner.DRAW
-            for j in nodes:
-                j.drawCount += 1
+            if doInsertDB:
+                for j in nodes:
+                    j.drawCount += 1
             break
-    bulkinsert(nodes)
+    if doInsertDB:
+        bulkinsert(nodes)
     return winner
 
 def loop(laps: int):
